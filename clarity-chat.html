@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Greetie AI Assistant</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: transparent;
+    }
+
+    /* Chat bubble */
+    .chat-bubble {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: #f80199;
+      color: white;
+      border-radius: 20px;
+      width: 60px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(248, 1, 153, 0.3);
+      z-index: 1000;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transform: scale(1);
+      overflow: hidden;
+    }
+
+    .chat-bubble::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, transparent 50%, rgba(255,255,255,0.1) 100%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .chat-bubble:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 30px rgba(248, 1, 153, 0.4);
+    }
+
+    .chat-bubble:hover::before {
+      opacity: 1;
+    }
+
+    .chat-bubble:active {
+      transform: scale(1.05);
+    }
+
+    .chat-icon {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      transition: transform 0.3s ease;
+    }
+
+    .chat-bubble:hover .chat-icon {
+      transform: scale(1.1) rotate(5deg);
+    }
+
+    .chat-bubble.active {
+      background: #24298F;
+      border-radius: 20px;
+    }
+
+    .chat-bubble.active:hover {
+      transform: scale(1.05);
+    }
+
+    /* Chat container */
+    .chat-container {
+      position: fixed;
+      bottom: 100px;
+      right: 24px;
+      width: 380px;
+      height: 600px;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 1000;
+      transform: translateY(20px);
+      opacity: 0;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .chat-container.visible {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    /* Header */
+    .chat-header {
+      background: white;
+      color: #1a1a1a;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+      position: relative;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      user-select: none;
+    }
+
+    .chat-header:hover {
+      background: rgba(248, 1, 153, 0.02);
+    }
+
+    .robot-avatar {
+      width: 40px;
+      height: 40px;
+      background: #f80199;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      transition: transform 0.2s ease;
+    }
+
+    .chat-header:hover .robot-avatar {
+      transform: scale(1.05);
+    }
+
+    .chat-title {
+      flex: 1;
+    }
+
+    .chat-title h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #1a1a1a;
+      margin-bottom: 2px;
+    }
+
+    .chat-title p {
+      font-size: 13px;
+      color: #666;
+      font-weight: 400;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 12px;
+      height: 12px;
+      background: #10b981;
+      border-radius: 50%;
+      border: 2px solid white;
+      box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2);
+      animation: pulse 2s infinite;
+      flex-shrink: 0;
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2), 0 0 0 0 rgba(16, 185, 129, 0.4);
+      }
+      70% {
+        box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2), 0 0 0 10px rgba(16, 185, 129, 0);
+      }
+      100% {
+        box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2), 0 0 0 0 rgba(16, 185, 129, 0);
+      }
+    }
+
+    .header-close-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      color: #666;
+      font-size: 16px;
+    }
+
+    .header-close-btn:hover {
+      background: rgba(248, 1, 153, 0.1);
+      color: #f80199;
+      transform: scale(1.1);
+    }
+
+    /* Messages area */
+    .chat-messages {
+      flex: 1;
+      padding: 24px;
+      overflow-y: auto;
+      background: #fafafa;
+      scrollbar-width: none;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chat-message {
+      margin-bottom: 16px;
+      max-width: 85%;
+      animation: messageSlideIn 0.3s ease;
+    }
+
+    @keyframes messageSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .chat-message.bot {
+      margin-right: auto;
+    }
+
+    .chat-message.user {
+      margin-left: auto;
+    }
+
+    .message-content {
+      padding: 16px 20px;
+      border-radius: 20px;
+      font-size: 14px;
+      line-height: 1.5;
+      font-weight: 400;
+    }
+
+    .chat-message.bot .message-content {
+      background: white;
+      color: #1a1a1a;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 20px 20px 20px 4px;
+    }
+
+    .chat-message.user .message-content {
+      background: #f80199;
+      color: white;
+      border-radius: 20px 20px 4px 20px;
+    }
+
+    /* Input area */
+    .chat-input {
+      padding: 24px;
+      background: white;
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .input-container {
+      flex: 1;
+      position: relative;
+    }
+
+    .chat-input input {
+      width: 100%;
+      border: 1px solid rgba(0, 0, 0, 0.1);
+      border-radius: 20px;
+      padding: 14px 20px 14px 48px;
+      font-size: 14px;
+      background: #f8f9fa;
+      transition: all 0.2s ease;
+      outline: none;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .chat-input input:focus {
+      border-color: #f80199;
+      background: white;
+      box-shadow: 0 0 0 3px rgba(248, 1, 153, 0.1);
+    }
+
+    .input-container::before {
+      content: '💬';
+      position: absolute;
+      left: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      opacity: 0.5;
+      transition: opacity 0.2s ease;
+      pointer-events: none;
+    }
+
+    .chat-input input:focus + .input-container::before,
+    .chat-input input:not(:placeholder-shown) + .input-container::before {
+      opacity: 0;
+    }
+
+    .send-button {
+      width: 44px;
+      height: 44px;
+      background: #f80199;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .send-button:hover {
+      background: #e00189;
+      transform: scale(1.02);
+      box-shadow: 0 2px 8px rgba(248, 1, 153, 0.2);
+    }
+
+    .send-button:active {
+      transform: scale(0.95);
+    }
+
+    .send-icon {
+      width: 0;
+      height: 0;
+      border-left: 8px solid white;
+      border-top: 5px solid transparent;
+      border-bottom: 5px solid transparent;
+      margin-left: 2px;
+      transition: transform 0.2s ease;
+    }
+
+    .send-button:hover .send-icon {
+      transform: translateX(1px);
+    }
+
+    /* Typing indicator */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #666;
+      font-style: italic;
+      padding: 16px 20px;
+      background: white;
+      border-radius: 20px 20px 20px 4px;
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      margin-bottom: 16px;
+      max-width: 200px;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+    }
+
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      background: #f80199;
+      border-radius: 50%;
+      animation: typingBounce 1.4s infinite ease-in-out;
+    }
+
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes typingBounce {
+      0%, 80%, 100% {
+        opacity: 0.3;
+        transform: scale(0.8);
+      }
+      40% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* Message bubble */
+    .message-bubble {
+      position: fixed !important;
+      bottom: 100px !important;
+      right: 24px !important;
+      background: white !important;
+      color: #1a1a1a !important;
+      padding: 16px 20px !important;
+      border-radius: 18px !important;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+      font-size: 14px !important;
+      font-weight: 500 !important;
+      font-family: 'Montserrat', sans-serif !important;
+      z-index: 9999 !important;
+      max-width: 240px !important;
+      border: 1px solid rgba(0, 0, 0, 0.1) !important;
+      cursor: pointer !important;
+      display: block !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      transform: none !important;
+      transition: all 0.3s ease !important;
+    }
+
+    .message-bubble::before {
+      content: '' !important;
+      position: absolute !important;
+      bottom: -10px !important;
+      right: 20px !important;
+      width: 0 !important;
+      height: 0 !important;
+      border-left: 10px solid transparent !important;
+      border-right: 10px solid transparent !important;
+      border-top: 10px solid white !important;
+      z-index: 10000 !important;
+    }
+
+    .message-bubble:hover {
+      background: #f8f9fa !important;
+      transform: scale(1.02) translateY(-2px) !important;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.2) !important;
+    }
+
+    .message-bubble.hidden {
+      display: none !important;
+    }
+
+    .message-bubble.fade-out {
+      opacity: 0 !important;
+      transform: scale(0.9) translateY(-5px) !important;
+      transition: all 0.4s ease !important;
+    }
+
+    /* Welcome message */
+    .welcome-message .message-content {
+      background: linear-gradient(135deg, #f80199 0%, #24298F 100%);
+      color: white;
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 480px) {
+      .chat-container {
+        width: calc(100vw - 24px);
+        height: calc(100vh - 140px);
+        right: 12px;
+        left: 12px;
+        bottom: 80px;
+        border-radius: 20px;
+      }
+      
+      .chat-bubble {
+        right: 18px;
+        bottom: 18px;
+        width: 56px;
+        height: 56px;
+      }
+
+      .message-bubble {
+        right: 18px;
+        bottom: 80px;
+        max-width: calc(100vw - 120px);
+      }
+
+      .chat-messages {
+        padding: 16px;
+      }
+
+      .chat-input {
+        padding: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Message Bubble -->
+  <div id="message-bubble" class="message-bubble">
+    👋 Hey! Can I help you?
+  </div>
+
+  <!-- Chat Bubble -->
+  <div id="chat-toggle" class="chat-bubble" tabindex="0" role="button" aria-label="Open chat">
+    <div class="chat-icon">💬</div>
+  </div>
+
+  <!-- Chat Container -->
+  <div id="chat-container" class="chat-container hidden">
+    <div class="chat-header" id="chat-header" role="button" tabindex="0" aria-label="Close chat">
+      <div class="robot-avatar">🤖</div>
+      <div class="chat-title">
+        <h3>Greetie</h3>
+        <p>
+          <span class="status-dot"></span>
+          <span id="bot-status">Online via n8n</span>
+        </p>
+      </div>
+      <button class="header-close-btn" id="header-close" aria-label="Close chat">✕</button>
+    </div>
+    
+    <div class="chat-messages" id="chat-messages">
+      <div class="chat-message bot welcome-message" id="greeting-message">
+        <div class="message-content">
+          <strong>Good day!</strong><br/>I'm Greetie, your AI assistant. How can I help you today?
+        </div>
+      </div>
+      <!-- Debug button - remove in production -->
+      <div class="chat-message bot">
+        <div class="message-content" style="background: #e3f2fd; color: #1976d2; cursor: pointer; text-align: center;" onclick="testConnection()">
+          🔧 Test Connection (Debug)
+        </div>
+      </div>
+    </div>
+    
+    <div class="chat-input">
+      <div class="input-container">
+        <input type="text" id="user-input" placeholder="Ask me anything..." />
+      </div>
+      <button class="send-button" id="send-btn" aria-label="Send message">
+        <div class="send-icon"></div>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // Configuration - Using your ACTIVE n8n webhook
+    window.ChatWidgetConfig = {
+      webhook: {
+        url: 'https://clarity.bydisruptglobal.com/webhook/9068e0f4-3389-4359-a984-473a37bc5852/chat',
+        route: 'general'
+      },
+      style: {
+        primaryColor: '#f80199',
+        secondaryColor: '#24298F',
+        position: 'right',
+        backgroundColor: '#ffffff',
+        fontColor: '#1a1a1a'
+      }
+    };
+
+    // Function to generate or retrieve a unique chat ID
+    function getChatId() {
+      let chatId = sessionStorage.getItem("chatId");
+      if (!chatId) {
+        chatId = "chat_" + Math.random().toString(36).substr(2, 9);
+        sessionStorage.setItem("chatId", chatId);
+      }
+      return chatId;
+    }
+
+    // Initialize greeting
+    function initializeGreeting() {
+      const now = new Date();
+      const hour = now.getHours();
+      let greeting = "Good evening!";
+      if (hour < 12) greeting = "Good morning!";
+      else if (hour < 18) greeting = "Good afternoon!";
+      
+      const greetingBox = document.querySelector("#greeting-message .message-content");
+      greetingBox.innerHTML = `<strong>${greeting}</strong><br/>I'm Greetie, your AI assistant. How can I help you today?`;
+    }
+
+    // UI Elements
+    const chatToggle = document.getElementById("chat-toggle");
+    const chatContainer = document.getElementById("chat-container");
+    const messageBubble = document.getElementById("message-bubble");
+    const chatHeader = document.getElementById("chat-header");
+    const headerCloseBtn = document.getElementById("header-close");
+    const userInput = document.getElementById("user-input");
+    const sendBtn = document.getElementById("send-btn");
+    const chatMessages = document.getElementById("chat-messages");
+
+    // Auto-hide message bubble after 8 seconds
+    setTimeout(() => {
+      if (!chatContainer.classList.contains("visible")) {
+        messageBubble.classList.add("fade-out");
+        setTimeout(() => {
+          messageBubble.classList.add("hidden");
+        }, 400);
+      }
+    }, 8000);
+
+    // Event Listeners
+    messageBubble.onclick = openChat;
+    chatToggle.onclick = toggleChat;
+    chatHeader.onclick = closeChat;
+    headerCloseBtn.onclick = (e) => { e.stopPropagation(); closeChat(); };
+    sendBtn.onclick = sendMessage;
+
+    // Keyboard events
+    userInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    });
+
+    function toggleChat() {
+      if (chatContainer.classList.contains("hidden")) openChat();
+      else closeChat();
+    }
+
+    function openChat() {
+      chatContainer.classList.remove("hidden");
+      setTimeout(() => chatContainer.classList.add("visible"), 10);
+      chatToggle.classList.add("active");
+      messageBubble.classList.add("fade-out");
+      setTimeout(() => { messageBubble.classList.add("hidden"); }, 400);
+      setTimeout(() => { userInput.focus(); }, 500);
+    }
+
+    function closeChat() {
+      chatContainer.classList.remove("visible");
+      setTimeout(() => chatContainer.classList.add("hidden"), 400);
+      chatToggle.classList.remove("active");
+    }
+
+    // Message handling
+    function addMessage(sender, text) {
+      const messageDiv = document.createElement("div");
+      messageDiv.className = `chat-message ${sender}`;
+      
+      const contentDiv = document.createElement("div");
+      contentDiv.className = "message-content";
+      contentDiv.innerHTML = text;
+      messageDiv.appendChild(contentDiv);
+      chatMessages.appendChild(messageDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function showTypingIndicator() {
+      const typingDiv = document.createElement("div");
+      const id = 'typing-' + Date.now();
+      typingDiv.id = id;
+      typingDiv.className = "typing-indicator";
+      typingDiv.innerHTML = `<span>Greetie is thinking</span><div class="typing-dots"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+      chatMessages.appendChild(typingDiv);
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+      return id;
+    }
+
+    function removeTypingIndicator(id) {
+      const typingDiv = document.getElementById(id);
+      if (typingDiv) typingDiv.remove();
+    }
+
+    // Send message function with enhanced error handling
+    function sendMessage() {
+      let message = userInput.value.trim();
+      if (message === "") return;
+
+      // Add user message to chat
+      addMessage('user', message);
+      userInput.value = "";
+      
+      // Show typing indicator
+      const typingId = showTypingIndicator();
+
+      let chatId = getChatId();
+      
+      // Log the request for debugging
+      const payload = {
+        chatId: chatId,
+        message: message,
+        route: window.ChatWidgetConfig.webhook.route
+      };
+      
+      console.log("Sending to n8n:", window.ChatWidgetConfig.webhook.url);
+      console.log("Payload:", payload);
+
+      fetch(window.ChatWidgetConfig.webhook.url, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(payload),
+        mode: 'cors', // Explicitly set CORS mode
+        credentials: 'omit' // Don't send credentials
+      })
+      .then(response => {
+        console.log("Response status:", response.status);
+        console.log("Response headers:", response.headers);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.text(); // Get as text first
+      })
+      .then(textData => {
+        console.log("Raw response:", textData);
+        
+        // Try to parse as JSON
+        let data;
+        try {
+          data = JSON.parse(textData);
+        } catch (e) {
+          // If not JSON, treat as plain text
+          data = { text: textData };
+        }
+        
+        removeTypingIndicator(typingId);
+        
+        // Handle response - try multiple possible response fields
+        const botMessage = data.text || data.output || data.message || data.reply || textData || "Sorry, I couldn't understand that.";
+        addMessage('bot', botMessage);
+      })
+      .catch(error => {
+        removeTypingIndicator(typingId);
+        console.error("Detailed error:", error);
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        
+        let errorMessage = "I'm having trouble connecting right now. ";
+        
+        if (error.name === 'TypeError' && error.message.includes('Failed to fetch')) {
+          errorMessage += "This might be a CORS or network issue. Check the browser console for details.";
+        } else if (error.message.includes('HTTP')) {
+          errorMessage += `Server responded with: ${error.message}`;
+        } else {
+          errorMessage += "Please try again in a moment.";
+        }
+        
+        addMessage('bot', errorMessage);
+      });
+    }
+
+    // Test connection function with CORS debugging
+    async function testConnection() {
+      console.log("🔧 Testing n8n connection...");
+      addMessage('bot', "Testing connection to n8n...");
+      
+      // First, let's check what origin we're running from
+      console.log("Current page origin:", window.location.origin);
+      console.log("Current page protocol:", window.location.protocol);
+      console.log("Running from file system?", window.location.protocol === 'file:');
+      
+      try {
+        const testPayload = {
+          chatId: "test_" + Date.now(),
+          message: "hello test",
+          route: "general"
+        };
+        
+        console.log("Test URL:", window.ChatWidgetConfig.webhook.url);
+        console.log("Test payload:", JSON.stringify(testPayload, null, 2));
+        
+        // Try with no-cors mode first to see if it's a CORS issue
+        const response = await fetch(window.ChatWidgetConfig.webhook.url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(testPayload),
+          mode: 'no-cors' // This will bypass CORS but limit response access
+        });
+        
+        console.log("Response status:", response.status);
+        console.log("Response type:", response.type);
+        
+        if (response.type === 'opaque') {
+          addMessage('bot', '⚠️ CORS Issue Detected! The request was sent but we cannot read the response due to CORS restrictions.');
+          addMessage('bot', '🔧 Solutions:<br/>1. Host this file on the same domain as your n8n<br/>2. Configure CORS in your n8n instance<br/>3. Use a local web server instead of opening file directly');
+          return;
+        }
+        
+        // If we get here, try to read the response normally
+        const responseText = await response.text();
+        console.log("Raw response:", responseText);
+        
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (e) {
+          data = { text: responseText };
+        }
+        
+        const result = data.text || data.output || data.message || responseText || "Connection successful but no response data";
+        addMessage('bot', `✅ Connection test result: ${result}`);
+        document.getElementById("bot-status").textContent = "Online via n8n";
+        
+      } catch (error) {
+        console.error("❌ Connection test failed:", error);
+        
+        // Provide specific guidance based on the error
+        if (error.message === 'Failed to fetch') {
+          addMessage('bot', `❌ CORS/Network Error Detected!`);
+          
+          if (window.location.protocol === 'file:') {
+            addMessage('bot', '🔧 You\'re opening this file directly. Try:<br/>1. Use a local web server (python -m http.server)<br/>2. Host on the same domain as your n8n<br/>3. Use a service like ngrok');
+          } else {
+            addMessage('bot', '🔧 CORS issue. Your n8n server needs to allow requests from: ' + window.location.origin);
+          }
+        } else {
+          addMessage('bot', `❌ Connection failed: ${error.message}`);
+        }
+        
+        document.getElementById("bot-status").textContent = "Connection issues";
+      }
+    }
+
+    // Initialize on load
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeGreeting();
+      
+      // Test connection after page loads
+      setTimeout(testConnection, 1000);
+    });
+  </script>
+</body>
+</html>
