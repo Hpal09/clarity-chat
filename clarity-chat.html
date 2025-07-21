@@ -36,7 +36,65 @@
       z-index: 1000;
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       transform: scale(1);
-      overflow: hidden;
+      overflow: visible; /* Changed from hidden to visible */
+    }
+
+    /* Notification badge */
+    .notification-badge {
+      position: absolute;
+      top: -12px;
+      right: -12px;
+      background: #ff4444;
+      color: white;
+      border-radius: 50%;
+      min-width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+      border: 2px solid white;
+      z-index: 1002;
+      animation: bounceIn 0.4s ease-out;
+      box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
+      padding: 0 6px;
+    }
+
+    .notification-badge.hidden {
+      display: none;
+    }
+
+    @keyframes bounceIn {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      50% {
+        transform: scale(1.2);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    /* Pulse animation for new messages */
+    .notification-badge.pulse {
+      animation: pulse-notification 2s infinite;
+    }
+
+    @keyframes pulse-notification {
+      0% {
+        box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4), 0 0 0 0 rgba(255, 68, 68, 0.4);
+      }
+      70% {
+        box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4), 0 0 0 8px rgba(255, 68, 68, 0);
+      }
+      100% {
+        box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4), 0 0 0 0 rgba(255, 68, 68, 0);
+      }
     }
 
     .chat-bubble::before {
@@ -517,6 +575,7 @@
   <!-- Chat Bubble -->
   <div id="chat-toggle" class="chat-bubble" tabindex="0" role="button" aria-label="Open chat">
     <div class="chat-icon">💬</div>
+    <div id="notification-badge" class="notification-badge hidden">1</div>
   </div>
 
   <!-- Chat Container -->
@@ -598,6 +657,34 @@
     const userInput = document.getElementById("user-input");
     const sendBtn = document.getElementById("send-btn");
     const chatMessages = document.getElementById("chat-messages");
+    const notificationBadge = document.getElementById("notification-badge");
+
+    // Notification system
+    let unreadCount = 0;
+    let chatIsVisible = false;
+
+    function updateNotificationBadge() {
+      if (unreadCount > 0 && !chatIsVisible) {
+        notificationBadge.textContent = unreadCount > 9 ? '9+' : unreadCount;
+        notificationBadge.classList.remove('hidden');
+        notificationBadge.classList.add('pulse');
+      } else {
+        notificationBadge.classList.add('hidden');
+        notificationBadge.classList.remove('pulse');
+      }
+    }
+
+    function markMessagesAsRead() {
+      unreadCount = 0;
+      updateNotificationBadge();
+    }
+
+    function addUnreadMessage() {
+      if (!chatIsVisible) {
+        unreadCount++;
+        updateNotificationBadge();
+      }
+    }
 
     // Auto-hide message bubble after 8 seconds
     setTimeout(() => {
@@ -647,12 +734,19 @@
       messageBubble.classList.add("fade-out");
       setTimeout(() => { messageBubble.classList.add("hidden"); }, 400);
       setTimeout(() => { userInput.focus(); }, 500);
+      
+      // Mark messages as read when chat is opened
+      chatIsVisible = true;
+      markMessagesAsRead();
     }
 
     function closeChat() {
       chatContainer.classList.remove("visible");
       setTimeout(() => chatContainer.classList.add("hidden"), 400);
       chatToggle.classList.remove("active");
+      
+      // Chat is now closed
+      chatIsVisible = false;
     }
 
     // Message handling
@@ -730,10 +824,16 @@
         
         const botMessage = data.text || data.output || data.message || data.reply || textData || "Sorry, I couldn't understand that.";
         addMessage('bot', botMessage);
+        
+        // Add notification for new bot message if chat is closed
+        addUnreadMessage();
       })
       .catch(error => {
         removeTypingIndicator(typingId);
         addMessage('bot', "I'm having trouble connecting right now. Please try again in a moment.");
+        
+        // Add notification for error message if chat is closed
+        addUnreadMessage();
       });
     }
 
