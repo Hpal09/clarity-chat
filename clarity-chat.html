@@ -275,8 +275,21 @@
       flex: 1;
       padding: 24px;
       overflow-y: auto;
-      background: #fafafa;
+      background: #fafafa url('https://raw.githubusercontent.com/Hpal09/clarity-chat/main/background-image.png') center/cover;
       scrollbar-width: none;
+      position: relative;
+    }
+
+    .chat-messages::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(250, 250, 250, 0.85);
+      pointer-events: none;
+      z-index: 0;
     }
 
     .chat-messages::-webkit-scrollbar {
@@ -287,6 +300,8 @@
       margin-bottom: 16px;
       max-width: 85%;
       animation: messageSlideIn 0.3s ease;
+      position: relative;
+      z-index: 1;
     }
 
     @keyframes messageSlideIn {
@@ -444,6 +459,8 @@
       border: 1px solid rgba(0, 0, 0, 0.06);
       margin-bottom: 16px;
       max-width: 200px;
+      position: relative;
+      z-index: 1;
     }
 
     .typing-dots {
